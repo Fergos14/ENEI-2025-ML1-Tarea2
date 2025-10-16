@@ -4,98 +4,23 @@
 
 **Environment:** Python, `numpy`, `pandas`, `matplotlib`, `scikit-learn`, `ucimlrepo`.
 
+**Integrante:** Rodrigo Caballero
+
+
 ---
+###  How the gradient differs between binary, OvA, and multinomial forms
+En la **regresión logística binaria**, el gradiente se calcula en función de la diferencia entre las probabilidades predichas por el modelo y las verdaderas etiquetas. Solo se ajusta un conjunto de pesos, lo que hace que el proceso sea directo y enfocado en una única frontera de decisión entre dos clases.
 
-### Part A. Binary Logistic Regression from Scratch
+En el enfoque **One-vs-All (OvA)**, el problema se divide en varios submodelos binarios. Cada uno aprende a distinguir una clase frente a todas las demás, por lo que cada clasificador tiene su propia gradiente y conjunto de pesos. El cálculo del gradiente es el mismo que en el caso binario, pero se realiza de forma independiente para cada modelo. Esto implica mayor redundancia y más iteraciones totales, ya que cada clasificador aprende patrones similares sin compartir información con los otros.
 
-1. **Dataset**
-   Use the **Heart Disease dataset** from the UCI repository. You can do this by running:
-```python
-!pip install ucimlrepo
+En la **regresión logística multinomial (softmax)**, los gradientes de todas las clases se actualizan simultáneamente. Cada clase ajusta sus pesos considerando también el efecto que ese cambio tendrá sobre las demás clases, ya que las probabilidades están acopladas y deben sumar uno. Este enfoque permite aprovechar información compartida y suele converger más rápido, evitando el entrenamiento separado de múltiples modelos.
 
-from ucimlrepo import fetch_ucirepo
-
-heart_disease = fetch_ucirepo(id = 45)
-X = heart_disease.data.features # features
-Y = heart_disease.data.targets # heart disease diagnosis
-
-```
-  Originally, the Y variable is an integer with varying values. Recode it to be either 0 (when the original value is 0) or 1 (otherwise)
-
-   * Task: predict whether a patient has heart disease.
-   * Standardize numeric features, one-hot encode categorical ones.
-   * Split into 70% train / 30% test.
-
-3. **Model Derivation and Implementation**
-
-   * Implement gradient descent to maximize the log-likelihood (or equivalently, minimize the negative log-likelihood).
-   * Show convergence plots for at least two learning rates.
-
-4. **Evaluation**
-
-   * Compute accuracy, precision, recall, F1 score in the test set.
-   * Compare with `sklearn.linear_model.LogisticRegression`.
+---
+###  How numerical stability issues may arise in softmax
+Cuando los valores que entran al **softmax** son muy altos (**logit**), las exponenciales pueden crecer demasiado y dar números enormes que la computadora no puede manejar correctamente. Esto provoca que las operaciones den resultados extraños o inválidos, como valores infinitos o errores en el cálculo. Esto afecta directamente la función de costo y puede impedir la convergencia del modelo. Para evitar este problema, se aplica una **corrección de estabilidad numérica**: antes de exponenciar los **logits**, se resta el valor máximo de cada fila. Este ajuste mantiene las relaciones relativas entre los valores y evita que las exponenciales crezcan demasiado. Aunque el resultado final del **softmax** no cambia, este paso es fundamental para evitar desbordamientos y mantener un entrenamiento estable. Sin esta corrección, las probabilidades pueden volverse inconsistentes y el descenso de gradiente incluso puede divergir.
 
 ---
 
-### Part B. Multiclass Logistic Regression via One-vs-All (OvA)
-
-4. **Dataset**
-   Use the **Wine dataset** (`from sklearn.datasets import load_wine`).
-
-   * There are 3 wine cultivars (classes) with 13 chemical features.
-   * Standardize all features.
-
-5. **OvA Implementation**
-
-   * Build **three binary classifiers**, each distinguishing one class vs. all others.
-   * Use your binary logistic regression optimizer from Part A.
-   * For prediction:
-
-     * Compute probabilities from each classifier.
-     * Assign each observation to the class with the highest predicted probability.
-   * Report confusion matrix and accuracy.
-
-6. **Comparison**
-
-   * Fit `LogisticRegression(multi_class="ovr")` from sklearn.
-   * Compare coefficients and accuracy to your own implementation.
-
----
-
-### Part C. Multinomial (Softmax) Logistic Regression from Scratch
-
-7. **Theory**
-
-   * Derive the gradient of the log-likelihood function for muticlass classification (check the [notebook for session 4](https://colab.research.google.com/drive/1QKPnTQ_CtqY_4IZHr_dUAzR3nfj8bLbW?usp=sharing))
-
-8. **Implementation**
-
-   * Implement gradient descent updating all class weight vectors simultaneously.
-   * Include a `softmax` function with numerical stability (`z -= np.max(z, axis=1, keepdims=True)` before exponentiation).
-   * Monitor log-likelihood convergence.
-
-9. **Evaluation**
-
-   * Use the same Wine dataset.
-   * Compute accuracy, per-class precision/recall, and confusion matrix.
-   * Compare to `LogisticRegression(multi_class="multinomial", solver="lbfgs")`.
-
----
-
-### Deliverables
-
-You must fork the [original repository](https://github.com/RodrigoGrijalba/ENEI-2025-ML1-Tarea2), and turn in a link to your group's repository with:
-
-* A Jupyter notebook (in the `src` folder) with:
-
-  * Binary logistic regression (from scratch and sklearn)
-  * OvA and multinomial implementations
-  * Gradient derivations
-  * Convergence and comparison plots
-* A short (~600 words) write-up explaining:
-
-  * How the gradient differs between binary, OvA, and multinomial forms
-  * How numerical stability issues may arise in softmax
-  * When OvA and multinomial approaches diverge in predictions
+###  When OvA and multinomial approaches diverge in predictions
+Las diferencias entre ambos enfoques se resaltan cuando las clases no están bien separadas o se mezclan entre sí. En el modelo **One-vs-All**, cada clasificador trabaja por su cuenta, así que puede pasar que más de una clase tenga una probabilidad alta al mismo tiempo. Eso hace que las predicciones sean menos claras o incluso contradictorias. En cambio, el modelo **multinomial (softmax)** obliga a que las clases compitan entre sí, porque todas las probabilidades tienen que sumar uno. Esto hace que las decisiones sean más coherentes y fáciles de interpretar. En este caso, como el **dataset de vinos** está muy bien definido, ambos métodos dieron exactamente el mismo resultado. Pero en situaciones más reales, donde las fronteras entre clases no son tan evidentes o las variables están muy correlacionadas, el modelo **softmax** suele comportarse mejor, ya que considera la competencia entre las clases al mismo tiempo y mantiene una **distribución de probabilidades más equilibrada**.
 
